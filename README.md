@@ -35,7 +35,8 @@ cd gitops-demo/infra
 
 # init and apply terraform
 terraform init
-terraform apply -auto-approve
+terraform init
+terraform apply -var="argocd_admin_password=<your-argocd-admin-password>" -auto-approve
 
 ## install argocd manaully
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml

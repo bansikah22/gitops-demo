@@ -1,10 +1,18 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx-demo
+  name: mailhog-demo
 spec:
   selector:
-    app: nginx-demo
+    app: mailhog-demo
   ports:
-  - port: 80
-    targetPort: 80
+  - name: http
+    protocol: TCP
+    port: 8025
+    targetPort: 8025
+  - name: smtp
+    protocol: TCP
+    port: 1025
+    targetPort: 1025
+  type: ClusterIP
+

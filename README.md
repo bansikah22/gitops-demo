@@ -59,7 +59,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
 # 4. Register App with Argo CD
 # ------------------------------------------------------------
 # apply the Application manifest from your repo
-kubectl apply -f ../apps/nginx-app.yaml -n argocd
+kubectl apply -f ../apps/mailhog-app.yaml -n argocd
 
 # ------------------------------------------------------------
 # 5. Verify Deployment
@@ -71,7 +71,8 @@ kubectl get applications -n argocd
 kubectl get pods,svc
 
 # expose the nginx-demo service from minikube
-minikube service nginx-demo --url
+# expose the mailhog-demo service from minikube
+minikube service mailhog-demo --url
 ```
 
 ---

@@ -1,28 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-demo
+  name: mailhog-demo
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nginx-demo
+      app: mailhog-demo
   template:
     metadata:
       labels:
-        app: nginx-demo
+        app: mailhog-demo
     spec:
       containers:
-      - name: nginx
-        image: nginx:1.27
+      - name: mailhog
+        image: mailhog/mailhog:v1.0.1
         ports:
-        - containerPort: 80
-          name: http  
-          protocol: TCP
-        resources:     
+        - containerPort: 8025   # web UI
+        - containerPort: 1025   # SMTP
+        resources:
           requests:
-            cpu: "100m"
-            memory: "128Mi"
+            cpu: 50m
+            memory: 64Mi
           limits:
-            cpu: "250m"
-            memory: "256Mi"
+            cpu: 100m
+            memory: 128Mi

@@ -1,14 +1,13 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: nginx-demo
-  namespace: argocd
+  name: mailhog-demo
 spec:
   project: default
   source:
-    repoURL: https://github.com/bansikah22/gitops-demo.git
+    repoURL: https://github.com/bansikah22/gitops-demo
     targetRevision: HEAD
-    path: apps/overlays/dev
+    path: apps/overlays/dev   # dev overlay
   destination:
     server: https://kubernetes.default.svc
     namespace: default

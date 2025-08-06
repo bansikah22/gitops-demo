@@ -1,0 +1,36 @@
+version: 2.1
+
+executors:
+  terraform:
+    docker:
+      - image: hashicorp/terraform:1.6.6
+
+jobs:
+  terraform-validate:
+    executor: terraform
+    steps:
+      - checkout
+      - run:
+          name: Terraform Init
+          command: cd infra && terraform init -backend=false
+      - run:
+          name: Terraform Validate
+          command: cd infra && terraform validate
+
+  kustomize-validate:
+    docker:
+      - image: bitnami/kubectl:1.30
+    steps:
+      - checkout
+      - run:
+          name: Validate Kustomize Overlays
+          command: |
+            cd apps/overlays/dev && kubectl kustomize . > /dev/null
+            cd ../prod && kubectl kustomize . > /dev/null
+
+workflows:
+  version: 2
+  validate:
+    jobs:
+      - terraform-validate
+      - kustomize-validate

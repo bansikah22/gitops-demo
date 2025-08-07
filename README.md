@@ -34,6 +34,37 @@ git push -u origin master
 
 **Note**: ArgoCD needs access to your GitHub repository. Make sure the repository is public or configure SSH keys for private repos.
 
+### Troubleshooting
+
+#### ArgoCD Password
+If you need to get the ArgoCD admin password:
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+```
+
+#### Port Forwarding Issues
+If you can't access the UIs, restart port forwarding:
+```bash
+# Kill existing port forwards
+pkill -f "kubectl port-forward"
+
+# Restart ArgoCD port forward
+kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+
+# Restart MailHog port forward
+kubectl port-forward svc/dev-mailhog-demo -n dev 8025:8025 &
+```
+
+#### Application Not Syncing
+If the application shows "OutOfSync" or "Missing":
+```bash
+# Check application status
+kubectl get applications -n argocd
+
+# Force sync if needed
+kubectl patch application mailhog-demo -n argocd --type='merge' -p='{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}'
+```
+
 ```bash
 # ------------------------------------------------------------
 # 1. Start Minikube
@@ -60,7 +91,6 @@ terraform apply -var="argocd_admin_password=<your-argocd-admin-password>" -auto-
 # ------------------------------------------------------------
 # forward Argo CD API server to localhost
 kubectl port-forward svc/argocd-server -n argocd 8080:443 &
-sleep 5
 
 echo "Open ArgoCD UI at: https://localhost:8080"
 echo "Username: admin"
@@ -68,6 +98,8 @@ echo "Username: admin"
 # get initial admin password
 kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath="{.data.password}" | base64 -d && echo
+
+# Note: The password will be displayed in the terminal. Copy it for login.
 
 # ------------------------------------------------------------
 # 4. Register App with Argo CD
@@ -87,11 +119,9 @@ kubectl get applications -n argocd
 # check pods and services
 kubectl get pods,svc
 
-# expose the mailhog-demo service from minikube
-minikube service dev-mailhog-demo --url -n dev
-
 # Access MailHog UI
-echo "MailHog UI available at: http://$(minikube service dev-mailhog-demo --url -n dev | head -1)"
+kubectl port-forward svc/dev-mailhog-demo -n dev 8025:8025 &
+echo "MailHog UI available at: http://localhost:8025"
 
 # ------------------------------------------------------------
 # 6. Monitor GitOps Workflow
@@ -143,7 +173,7 @@ echo "Subject: Test Email" | kubectl exec -i $(kubectl get pods -n dev -l app=ma
 
 # Or use telnet to test SMTP
 kubectl exec -it $(kubectl get pods -n dev -l app=mailhog-demo -o jsonpath='{.items[0].metadata.name}') -n dev -- telnet localhost 1025
-
+```
 ---
 
 ## 🤝 Contributing
@@ -151,6 +181,30 @@ Contributions are welcome! Please open issues and pull requests.
 
 ## 📜 License
 This project is licensed under the terms of the [MIT License](LICENSE).
+
+## Verified and Tested
+
+This project has been successfully tested and verified with the following components:
+
+###  **Infrastructure**
+- ArgoCD deployed and running in Kubernetes
+- Terraform configuration validated and working
+- All namespaces created (argocd, dev)
+
+###  **Application Deployment**
+- MailHog application successfully deployed via GitOps
+- Kustomize overlays working correctly (dev/prod)
+- Service and deployment resources created
+
+###  **Access Methods**
+- ArgoCD UI accessible at https://localhost:8080
+- MailHog UI accessible at http://localhost:8025
+- Port forwarding working correctly
+
+### **GitOps Workflow**
+- Application syncs automatically from GitHub
+- Changes pushed to Git trigger automatic deployment
+- Monitoring scripts working correctly
 
 ## 🔄 GitOps Workflow with GitHub
 
@@ -206,6 +260,24 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443 &
 # View detailed documentation
 # See docs/ directory for comprehensive guides
 ```
+## 📸 Screenshots
+
+### MailHog Web Interface
+![MailHog Mail Page](docs/images/mailhog-mail-page.png)
+
+### ArgoCD Login
+![ArgoCD Login](docs/images/argocd-login.png)
+
+### ArgoCD Dashboard
+![ArgoCD Dashboard](docs/images/argocd-dashboard.png)
+
+### MailHog Application in ArgoCD
+![MailHog App Details](docs/images/argocd-mailhog-app-details.png)
+
+
+### MailHog Logs in ArgoCD
+![MailHog Logs](docs/images/mailhog-logs-argocd.png)
+
 
 ## 📚 References
 - [Argo CD Documentation](https://argo-cd.readthedocs.io/en/stable/)

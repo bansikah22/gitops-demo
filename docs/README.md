@@ -12,6 +12,18 @@ Complete guide for understanding and monitoring the GitOps workflow, including:
 - Troubleshooting common issues
 - Version testing procedures
 
+## Screenshots
+
+The project includes screenshots demonstrating the working GitOps workflow:
+
+- **ArgoCD Dashboard** - Main ArgoCD interface showing applications
+- **ArgoCD Login** - Login screen for ArgoCD
+- **MailHog App Details** - Detailed view of MailHog application in ArgoCD
+- **MailHog Web Interface** - MailHog email testing interface
+- **MailHog Logs** - Application logs view in ArgoCD
+
+These screenshots are referenced in the main README.md file.
+
 ## Quick Reference
 
 ### Monitoring Scripts

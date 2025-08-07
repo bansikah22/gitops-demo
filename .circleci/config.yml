@@ -4,6 +4,12 @@ executors:
   terraform:
     docker:
       - image: hashicorp/terraform:1.6.6
+  kubectl:
+    docker:
+      - image: bitnami/kubectl:1.30
+  security:
+    docker:
+      - image: aquasec/trivy:latest
 
 jobs:
   terraform-validate:
@@ -16,17 +22,82 @@ jobs:
       - run:
           name: Terraform Validate
           command: cd infra && terraform validate
+      - run:
+          name: Terraform Format Check
+          command: cd infra && terraform fmt -check -recursive
 
   kustomize-validate:
-    docker:
-      - image: bitnami/kubectl:1.30
+    executor: kubectl
     steps:
       - checkout
       - run:
-          name: Validate Kustomize Overlays
+          name: Validate Kustomize Base
+          command: cd apps/base && kubectl kustomize . > /dev/null
+      - run:
+          name: Validate Kustomize Dev Overlay
+          command: cd apps/overlays/dev && kubectl kustomize . > /dev/null
+      - run:
+          name: Validate Kustomize Prod Overlay
+          command: cd apps/overlays/prod && kubectl kustomize . > /dev/null
+      - run:
+          name: Generate Kustomize Output
           command: |
-            cd apps/overlays/dev && kubectl kustomize . > /dev/null
-            cd ../prod && kubectl kustomize . > /dev/null
+            echo "=== Dev Overlay ==="
+            kubectl kustomize apps/overlays/dev
+            echo "=== Prod Overlay ==="
+            kubectl kustomize apps/overlays/prod
+
+  security-scan:
+    executor: security
+    steps:
+      - checkout
+      - run:
+          name: Scan for Vulnerabilities
+          command: |
+            trivy fs --security-checks vuln,config,secret .
+            trivy config .
+      - run:
+          name: Scan Container Images
+          command: |
+            trivy image mailhog/mailhog:v1.0.1
+            trivy image mailhog/mailhog:latest
+
+  yaml-lint:
+    docker:
+      - image: node:18-alpine
+    steps:
+      - checkout
+      - run:
+          name: Install yamllint
+          command: |
+            apk add --no-cache yamllint
+      - run:
+          name: Lint YAML Files
+          command: |
+            yamllint apps/ -f parsable
+            yamllint infra/ -f parsable
+            yamllint .circleci/ -f parsable
+
+  gitops-test:
+    executor: kubectl
+    steps:
+      - checkout
+      - run:
+          name: Test GitOps Application
+          command: |
+            # Test that the ArgoCD application manifest is valid
+            kubectl apply --dry-run=client -f apps/mailhog-app.yaml
+            echo "GitOps application manifest is valid"
+      - run:
+          name: Validate Application Structure
+          command: |
+            # Check that all required files exist
+            test -f apps/base/deployment.yaml && echo "✓ Base deployment exists"
+            test -f apps/base/service.yaml && echo "✓ Base service exists"
+            test -f apps/base/kustomization.yaml && echo "✓ Base kustomization exists"
+            test -f apps/overlays/dev/kustomization.yaml && echo "✓ Dev overlay exists"
+            test -f apps/overlays/prod/kustomization.yaml && echo "✓ Prod overlay exists"
+            test -f apps/mailhog-app.yaml && echo "✓ ArgoCD application exists"
 
 workflows:
   version: 2
@@ -34,3 +105,9 @@ workflows:
     jobs:
       - terraform-validate
       - kustomize-validate
+      - yaml-lint
+      - gitops-test
+      - security-scan:
+          filters:
+            branches:
+              only: master

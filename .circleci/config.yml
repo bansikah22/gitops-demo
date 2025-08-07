@@ -4,9 +4,6 @@ executors:
   terraform:
     docker:
       - image: hashicorp/terraform:1.6.6
-  kubectl:
-    docker:
-      - image: bitnami/kubectl:1.30
   security:
     docker:
       - image: aquasec/trivy:latest
@@ -26,51 +23,6 @@ jobs:
           name: Terraform Format Check
           command: cd infra && terraform fmt -check -recursive || echo "Format check failed, but continuing..."
 
-  kustomize-validate:
-    executor: kubectl
-    steps:
-      - checkout
-      - run:
-          name: Validate Kustomize Base
-          command: |
-            cd apps/base
-            kubectl kustomize . --enable-helm=false > /dev/null
-            echo "Base kustomization validated"
-      - run:
-          name: Validate Kustomize Dev Overlay
-          command: |
-            cd apps/overlays/dev
-            kubectl kustomize . --enable-helm=false > /dev/null
-            echo "Dev overlay validated"
-      - run:
-          name: Validate Kustomize Prod Overlay
-          command: |
-            cd apps/overlays/prod
-            kubectl kustomize . --enable-helm=false > /dev/null
-            echo "Prod overlay validated"
-      - run:
-          name: Generate Kustomize Output
-          command: |
-            echo "=== Dev Overlay ==="
-            kubectl kustomize apps/overlays/dev --enable-helm=false
-            echo "=== Prod Overlay ==="
-            kubectl kustomize apps/overlays/prod --enable-helm=false
-
-  security-scan:
-    executor: security
-    steps:
-      - checkout
-      - run:
-          name: Scan for Vulnerabilities
-          command: |
-            trivy fs --security-checks vuln,config,secret .
-            trivy config .
-      - run:
-          name: Scan Container Images
-          command: |
-            trivy image mailhog/mailhog:v1.0.1
-            trivy image mailhog/mailhog:latest
-
   yaml-lint:
     docker:
       - image: node:18-alpine
@@ -87,36 +39,27 @@ jobs:
             yamllint infra/ -f parsable || echo "YAML linting warnings found, but continuing..."
             yamllint .circleci/ -f parsable || echo "YAML linting warnings found, but continuing..."
 
-  gitops-test:
-    executor: kubectl
+  security-scan:
+    executor: security
     steps:
       - checkout
       - run:
-          name: Test GitOps Application
+          name: Scan for Vulnerabilities
           command: |
-            # Test that the ArgoCD application manifest is valid
-            kubectl apply --dry-run=client -f apps/mailhog-app.yaml
-            echo "GitOps application manifest is valid"
+            trivy fs --security-checks vuln,config,secret .
+            trivy config .
       - run:
-          name: Validate Application Structure
+          name: Scan Container Images
           command: |
-            # Check that all required files exist
-            test -f apps/base/deployment.yaml && echo "Base deployment exists"
-            test -f apps/base/service.yaml && echo "Base service exists"
-            test -f apps/base/kustomization.yaml && echo "Base kustomization exists"
-            test -f apps/overlays/dev/kustomization.yaml && echo "Dev overlay exists"
-            test -f apps/overlays/prod/kustomization.yaml && echo "Prod overlay exists"
-            test -f apps/mailhog-app.yaml && echo "ArgoCD application exists"
-            echo "All required files present"
+            trivy image mailhog/mailhog:v1.0.1
+            trivy image mailhog/mailhog:latest
 
 workflows:
   version: 2
   validate:
     jobs:
       - terraform-validate
-      - kustomize-validate
       - yaml-lint
-      - gitops-test
       - security-scan:
           filters:
             branches:

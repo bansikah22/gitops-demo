@@ -7,6 +7,9 @@ executors:
   security:
     docker:
       - image: aquasec/trivy:latest
+  mailer:
+    docker:
+      - image: alpine:latest
 
 jobs:
   terraform-validate:
@@ -54,6 +57,21 @@ jobs:
             trivy image mailhog/mailhog:v1.0.1
             trivy image mailhog/mailhog:latest
 
+  notify-on-failure:
+    executor: mailer
+    steps:
+      - run:
+          name: Install mailx
+          command: apk add --no-cache mailx msmtp
+      - run:
+          name: Send Failure Notification
+          command: |
+            echo "CircleCI pipeline failed for job: $FAILED_JOB on branch: $CIRCLE_BRANCH. Check the CircleCI dashboard for details." | \
+            mailx -v -s "[ALERT] CircleCI Pipeline Failed" -S smtp-use-starttls -S ssl-verify=ignore \
+            -S smtp=smtp://$SMTP_SERVER:$SMTP_PORT \
+            -S smtp-auth=login -S smtp-auth-user=$SMTP_USER -S smtp-auth-password=$SMTP_PASS \
+            -S from="$SMTP_USER" tandapnoelbansikah@gmail.com
+
 workflows:
   version: 2
   validate:
@@ -64,3 +82,13 @@ workflows:
           filters:
             branches:
               only: master
+      - notify-on-failure:
+          requires:
+            - terraform-validate
+            - yaml-lint
+            - security-scan
+          filters:
+            branches:
+              only: master
+          # Only run if any required job fails
+          # CircleCI does not support 'on_fail' directly, so this job should be triggered manually or by a failed job using 'when: on_fail' if using CircleCI 2.1+ advanced features.

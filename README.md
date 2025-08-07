@@ -1,3 +1,15 @@
+# Table of Contents
+- [Project Overview](#gitops-demo-with-terraform-argo-cd-and-kubernetes)
+- [Getting Started](#-getting-started)
+- [GitHub Setup](#github-setup)
+- [Troubleshooting](#troubleshooting)
+- [Step-by-Step Usage](#step-by-step-usage)
+- [CI/CD & Notifications](#cicd--notifications)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Verified and Tested](#verified-and-tested)
+- [References](#-references)
+
 # GitOps Demo with Terraform, Argo CD, and Kubernetes
 
 [![License](https://img.shields.io/github/license/bansikah22/gitops-demo)](LICENSE)
@@ -65,116 +77,70 @@ kubectl get applications -n argocd
 kubectl patch application mailhog-demo -n argocd --type='merge' -p='{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}'
 ```
 
-```bash
-# ------------------------------------------------------------
-# 1. Start Minikube
-# ------------------------------------------------------------
-minikube start ## use default resources
+## Step-by-Step Usage
 
-# verify cluster
-kubectl get nodes
+_Follow these steps to get your environment up and running quickly. See the detailed instructions in each section above for more info._
 
-# ------------------------------------------------------------
-# 2. Install Argo CD with Terraform
-# ------------------------------------------------------------
-cd gitops-demo/infra
+1. **Start Minikube**
+2. **Install Argo CD with Terraform**
+3. **Access Argo CD**
+4. **Register App with Argo CD**
+5. **Verify Deployment**
+6. **Monitor GitOps Workflow**
+7. **Test GitOps Workflow**
+8. **Access MailHog Web Interface**
+9. **Test MailHog SMTP**
 
-# init and apply terraform
-terraform init
-terraform apply -target=helm_release.argocd -auto-approve
+## CI/CD & Notifications
 
-## this is to install argocd apps
-terraform apply -var="argocd_admin_password=<your-argocd-admin-password>" -auto-approve
+This project uses CircleCI for continuous integration and security checks. If a pipeline fails on the master branch, an email notification will be sent to the project maintainer (see CircleCI project settings for the configured recipient). Ensure your SMTP credentials are set in the CircleCI project environment variables for notifications to work.
 
-# ------------------------------------------------------------
-# 3. Access Argo CD
-# ------------------------------------------------------------
-# forward Argo CD API server to localhost
-kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+## Quick Start
 
-echo "Open ArgoCD UI at: https://localhost:8080"
-echo "Username: admin"
+Follow these steps to get started with this GitOps demo:
 
-# get initial admin password
-kubectl -n argocd get secret argocd-initial-admin-secret \
-  -o jsonpath="{.data.password}" | base64 -d && echo
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/bansikah22/gitops-demo.git
+   cd gitops-demo
+   ```
+2. **Start Minikube**
+   ```bash
+   minikube start
+   kubectl get nodes
+   ```
+3. **Provision infrastructure and install Argo CD with Terraform**
+   ```bash
+   cd infra
+   terraform init
+   # Install ArgoCD (this creates the initial admin password secret)
+   terraform apply -target=helm_release.argocd -auto-approve
+   # Retrieve the ArgoCD initial admin password
+   export ARGOCD_ADMIN_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
+   # Install ArgoCD apps using the password
+   terraform apply -var="argocd_admin_password=$ARGOCD_ADMIN_PASSWORD" -auto-approve
+   cd ..
+   ```
+4. **Access Argo CD UI**
+   ```bash
+   kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+   echo "Open ArgoCD UI at: https://localhost:8080"
+   echo "Username: admin"
+   # Get initial admin password
+   kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo
+   ```
+5. **Register the MailHog application with Argo CD**
+   ```bash
+   kubectl apply -f apps/mailhog-app.yaml -n argocd
+   kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+   ```
+6. **Access MailHog UI**
+   ```bash
+   kubectl port-forward svc/dev-mailhog-demo -n dev 8025:8025 &
+   echo "MailHog UI available at: http://localhost:8025"
+   ```
 
-# Note: The password will be displayed in the terminal. Copy it for login.
-
-# ------------------------------------------------------------
-# 4. Register App with Argo CD
-# ------------------------------------------------------------
-# apply the Application manifest from your repo
-kubectl apply -f ../apps/mailhog-app.yaml -n argocd
-
-# create the dev namespace (if not exists)
-kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
-
-# ------------------------------------------------------------
-# 5. Verify Deployment
-# ------------------------------------------------------------
-# check ArgoCD applications
-kubectl get applications -n argocd
-
-# check pods and services
-kubectl get pods,svc
-
-# Access MailHog UI
-kubectl port-forward svc/dev-mailhog-demo -n dev 8025:8025 &
-echo "MailHog UI available at: http://localhost:8025"
-
-# ------------------------------------------------------------
-# 6. Monitor GitOps Workflow
-# ------------------------------------------------------------
-# Check ArgoCD application status
-kubectl get applications -n argocd
-kubectl describe application mailhog-demo -n argocd
-
-# Check application pods and services
-kubectl get pods,svc -n dev
-kubectl describe pod -l app=mailhog-demo -n dev
-
-# Monitor ArgoCD logs
-kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller -f
-
-# Check application events
-kubectl get events -n dev --sort-by='.lastTimestamp'
-
-# ------------------------------------------------------------
-# 7. Test GitOps Workflow
-# ------------------------------------------------------------
-# Make a change to the application (e.g., update image version)
-# Edit apps/base/deployment.yaml and change the image version
-# Then push to GitHub and watch ArgoCD sync automatically
-
-# Example: Update MailHog version
-# Change from: mailhog/mailhog:v1.0.1
-# To: mailhog/mailhog:latest
-
-# ------------------------------------------------------------
-# 8. Access MailHog Web Interface
-# ------------------------------------------------------------
-# Method 1: Using minikube service
-minikube service dev-mailhog-demo --url -n dev
-
-# Method 2: Port forwarding
-kubectl port-forward svc/dev-mailhog-demo -n dev 8025:8025 &
-echo "MailHog UI: http://localhost:8025"
-
-# Method 3: Direct pod access
-kubectl port-forward pod/$(kubectl get pods -n dev -l app=mailhog-demo -o jsonpath='{.items[0].metadata.name}') -n dev 8025:8025 &
-echo "MailHog UI: http://localhost:8025"
-
-# ------------------------------------------------------------
-# 9. Test MailHog SMTP
-# ------------------------------------------------------------
-# Send test email to MailHog
-echo "Subject: Test Email" | kubectl exec -i $(kubectl get pods -n dev -l app=mailhog-demo -o jsonpath='{.items[0].metadata.name}') -n dev -- nc localhost 1025
-
-# Or use telnet to test SMTP
-kubectl exec -it $(kubectl get pods -n dev -l app=mailhog-demo -o jsonpath='{.items[0].metadata.name}') -n dev -- telnet localhost 1025
-```
----
+For more details, see the [Step-by-Step Usage](#step-by-step-usage) section below.
 
 ## 🤝 Contributing
 Contributions are welcome! Please open issues and pull requests.

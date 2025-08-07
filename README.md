@@ -24,7 +24,7 @@ This project demonstrates the GitOps workflow where Git is the **single source o
 ```bash
 # Initialize Git repository (if not already done)
 git init
-git remote add origin https://github.com/YOUR_USERNAME/gitops-demo.git
+git remote add origin https://github.com/bansikah22/gitops-demo.git
 
 # Push initial code to GitHub
 git add .

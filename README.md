@@ -93,7 +93,7 @@ _Follow these steps to get your environment up and running quickly. See the deta
 
 ## CI/CD & Notifications
 
-This project uses CircleCI for continuous integration and security checks. If a pipeline fails on the master branch, an email notification will be sent to the project maintainer (see CircleCI project settings for the configured recipient). Ensure your SMTP credentials are set in the CircleCI project environment variables for notifications to work.
+This project uses CircleCI for continuous integration and security checks. By default, CircleCI will notify project members of pipeline failures via email, according to each user's notification preferences. You can manage your notification settings in the CircleCI web interface.
 
 ## Quick Start
 

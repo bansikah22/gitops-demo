@@ -10,7 +10,7 @@ spec:
     path: apps/overlays/dev   # dev overlay
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
+    namespace: dev
   syncPolicy:
     automated:
       selfHeal: true

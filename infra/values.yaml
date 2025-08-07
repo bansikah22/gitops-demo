@@ -1,0 +1,25 @@
+# ArgoCD Helm values
+server:
+  extraArgs:
+    - --insecure
+  ingress:
+    enabled: false
+  service:
+    type: ClusterIP
+
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 1
+
+applicationSet:
+  enabled: false
+
+redis:
+  enabled: true
+  auth:
+    enabled: false
+
+dex:
+  enabled: false 

@@ -6,7 +6,7 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.0.0"
+      version = ">= 2.12.0"
     }
     argocd = {
       source  = "argoproj-labs/argocd"
@@ -20,9 +20,7 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  kubernetes {
-    config_path = "~/.kube/config"
-  }
+  # Inherits configuration from kubernetes provider
 }
 
 provider "argocd" {
@@ -73,7 +71,7 @@ resource "argocd_application" "mailhog" {
 
     destination {
       server    = "https://kubernetes.default.svc"
-      namespace = "default"
+      namespace = "dev"
     }
 
     sync_policy {
